@@ -7,16 +7,16 @@ object JsonExtractors:
         
     object IsArrayZ: 
         def unapply(v: Json): Option[Chunk[Json]] = 
-            v.as[Json.Arr].map(_.elements).toOption
+            v.asArray
 
     object IsObjectZ: 
         def unapply(v: Json): Option[Json.Obj] = 
-            v.as[Json.Obj].toOption
+            v.asObject
 
     object IsStringZ: 
-        def unapply(v: Json): Option[Json.Str] = 
-            v.as[Json.Str].toOption
+        def unapply(v: Json): Option[String] = 
+            v.asString
 
     object IsNumZ: 
         def unapply(v: Json): Option[Json.Num] = 
-            v.as[Json.Num].toOption
+            v.asNumber

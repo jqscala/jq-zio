@@ -69,7 +69,7 @@ given JQZioJZ[R, E]: Jq[FilterJZ[R, E]] with
                     (f1(ZStream(v)) cross f2(ZStream(v)))
                         .map:
                             case (IsObjectZ(obj), IsStringZ(key)) => 
-                                obj.get(key.value).getOrElse(Json.Null)
+                                obj.get(key).getOrElse(Json.Null)
                             case (o: Json, k: Json) => 
                                 TypeError.CannotIndex(???, ???)
                             case (e: TypeError, _) => 
