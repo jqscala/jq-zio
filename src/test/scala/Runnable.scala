@@ -1,11 +1,12 @@
 package jqzio
 
-import jq._
+import jq.{Json => _, _}
+import jq.std._
 import zio._
 import zio.stream._
-import io.circe.Json
+import zio.json.ast._
 
-given ZIORun[E]: RunnableFilter[Filter[Any, E]] with
+given ZIORun[E]: RunnableFilter[Filter[Any, E], Json] with
 
     extension [A](st: ZStream[Any, E, A])
         def runS: List[A] = 
@@ -16,5 +17,5 @@ given ZIORun[E]: RunnableFilter[Filter[Any, E]] with
             }
             
     extension (input: List[Json])
-        def throughJson(r: Filter[Any, E]): List[Json | TypeError] = 
+        def throughJson(r: Filter[Any, E]): List[Json | TypeError[Json]] = 
             r(ZStream(input*)).runS

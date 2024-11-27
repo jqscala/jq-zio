@@ -1,5 +1,5 @@
 val scala3Version = "3.3.0"
-val jqVersion = "0.1.0-SNAPSHOT"
+val jqVersion = "0.1.0-DECOUPLING"
 val scalatestVersion = "3.2.9"
 val circeVersion = "0.14.1"
 
@@ -8,12 +8,11 @@ lazy val root = project
   .settings(
     organization := "jqscala",
     name := "jq-zio",
-    version := "0.1.0-SNAPSHOT",
+    version := "0.1.0-DECOUPLING",
 
     scalaVersion := scala3Version,
 
     libraryDependencies ++= Seq(
-      "io.circe" %% "circe-core" % circeVersion,
       "jqscala" %% "jqscala" % jqVersion,
       "jqscala" %% "jqscala" % jqVersion classifier "tests",
       "dev.zio" %% "zio" % "2.1.11",

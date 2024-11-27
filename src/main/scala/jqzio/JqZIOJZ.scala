@@ -1,69 +1,63 @@
 package jqzio
 
-import jq._
+import jq.{Json => _, _}
 import zio._
 import zio.stream._
 import zio.json.ast._
 import JsonExtractors._
 
-type FilterJZ[R, E] = 
-    ZPipeline[R, E, Json, Json | TypeError]
+type Filter[R, E] = 
+    ZPipeline[R, E, Json, Json | TypeError[Json]]
 
-enum TypeError: 
-    case CannotIterateOver(j: Json)
-    case CannotIndexObjectWith(j: Json)
-    case CannotIndex(what: Json, _with: Json)
-    case Custom(msg: String = "")
+given JQZioJZ[R, E]: Jq[Filter[R, E]] with 
 
-given JQZioJZ[R, E]: Jq[FilterJZ[R, E]] with 
-
-    val isJson: PartialFunction[Json | TypeError, Json] = 
+    val isJson: PartialFunction[Json | TypeError[Json], Json] = 
         case j: Json => j
 
-    def id: FilterJZ[R, E] = 
+    def id: Filter[R, E] = 
         ZPipeline.identity
 
-    def str(s: String): FilterJZ[R, E] = 
+    def str(s: String): Filter[R, E] = 
         ZPipeline.map: _ => 
             Json.Str(s)
 
-    def error(msg: String): FilterJZ[R, E] = 
+    def error(msg: String): Filter[R, E] = 
         ZPipeline.map: _ => 
             TypeError.Custom(msg)
 
-    def iterator: FilterJZ[R, E] = 
+    def iterator: Filter[R, E] = 
         ZPipeline.map:
                 case IsObjectZ(v) => v.values
                 case IsArrayZ(v) => v
                 case j: Json => Chunk(TypeError.CannotIterateOver(j))
         .flattenIterables
    
-    def array(f: FilterJZ[R, E]): FilterJZ[R, E] =
+    def array(f: Filter[R, E]): Filter[R, E] =
         ZPipeline.fromFunction:  
             _ flatMap: json => 
                 f(ZStream(json))
                     .transduce(ZSink.collectAll)
                     .map: chunk => 
                         chunk.headOption match 
-                            case Some(error: TypeError) => error
+                            case Some(error: TypeError[Json]) => error
                             case _ => Json.Arr(chunk.collect(isJson)*)
 
-    extension (f1: FilterJZ[R, E])
-        def |(f2: FilterJZ[R, E]): FilterJZ[R, E] = 
+    extension (f1: Filter[R, E])
+        def |(f2: Filter[R, E]): Filter[R, E] = 
             ZPipeline.fromFunction: 
                 _ flatMap: v => 
                     f1(ZStream(v)) flatMap:
-                        case e: TypeError => ZStream(e)
+                        case e: TypeError[Json] => ZStream(e)
                         case j: Json => 
                             f2(ZStream(j)).collectWhile(isJson)
                 
-        infix def concat(f2: FilterJZ[R, E]): FilterJZ[R, E] = 
+        infix def concat(f2: Filter[R, E]): Filter[R, E] = 
             ZPipeline.fromFunction:  
                 _ flatMap: json => 
                     (f1(ZStream(json)) ++ f2(ZStream(json)))
                         .collectWhile(isJson)
 
-        def index(f2: FilterJZ[R, E]): FilterJZ[R, E] = 
+        def index(f2: Filter[R, E]): Filter[R, E] = 
             ZPipeline fromFunction: 
                 _ flatMap: v => 
                     (f1(ZStream(v)) cross f2(ZStream(v)))
@@ -72,16 +66,16 @@ given JQZioJZ[R, E]: Jq[FilterJZ[R, E]] with
                                 obj.get(key).getOrElse(Json.Null)
                             case (o: Json, k: Json) => 
                                 TypeError.CannotIndex(???, ???)
-                            case (e: TypeError, _) => 
+                            case (e: TypeError[Json], _) => 
                                 e
-                            case (_, e: TypeError) => 
+                            case (_, e: TypeError[Json]) => 
                                 e
                         .collectWhile(isJson)
 
-        def `catch`(f2: FilterJZ[R, E]): FilterJZ[R, E] = 
+        def `catch`(f2: Filter[R, E]): Filter[R, E] = 
             ZPipeline.fromFunction:
                 _ flatMap: json => 
                     f1(ZStream(json)) flatMap:
                         case j: Json => ZStream(j)
-                        case e: TypeError => 
+                        case e: TypeError[Json] => 
                             f2(ZStream(Json.Str(e.toString))) 
