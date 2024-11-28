@@ -9,7 +9,7 @@ import JsonExtractors._
 type Filter[R, E] = 
     ZPipeline[R, E, Json, Json | TypeError[Json]]
 
-given JQZioJZ[R, E]: Jq[Filter[R, E]] with 
+given JQZio[R, E]: Jq[Filter[R, E]] with 
 
     val isJson: PartialFunction[Json | TypeError[Json], Json] = 
         case j: Json => j
